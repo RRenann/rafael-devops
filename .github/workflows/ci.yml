@@ -32,6 +32,10 @@ jobs:
       - name: Rodar Testes
         run: npm test
 
+      # 4.5. Executa a Verificação de Dependências (SCA)
+      - name: Verificar vulnerabilidades de dependências (SCA)
+        run: npm audit --audit-level=high
+
       # 5. Configura o Docker Buildx
       - name: Configurar Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -47,9 +51,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       # 7. Extrair metadados (tags) para o Docker
-      # Este step só roda se for um push na branch main
       - name: Extrair Metadados do Docker
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         id: meta
         uses: docker/metadata-action@v5
         with:
@@ -58,13 +60,37 @@ jobs:
             type=sha
             latest
 
-      # 8. Build E PUSH da Imagem Docker
-      - name: Build e Push da Imagem Docker
+      # 8. Build da Imagem Docker (sem publicar ainda)
+      - name: Build da Imagem Docker
         uses: docker/build-push-action@v5
         with:
           context: .
           file: ./Dockerfile
-          push: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+          push: false
+          load: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+      # 9. Verificação de Contêiner (Trivy)
+      # Escaneia a imagem recém-construída antes de publicá-la
+      - name: Escanear Imagem com Trivy
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ghcr.io/rrenann/rafael-devops:latest
+          format: table
+          exit-code: '1'
+          severity: 'CRITICAL'
+
+      # 10. Push da Imagem Docker
+      # Este step só roda se for um push na branch main, e só chega aqui
+      # se o Trivy não tiver encontrado vulnerabilidades CRITICAL
+      - name: Push da Imagem Docker
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 

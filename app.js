@@ -4,7 +4,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.get('/', (req, res) => {
-  res.send('Olá professor Rafael');
+  res.send('Olá Mundo DevSecOps');
 });
 
 // Só sobe o servidor se este arquivo for executado diretamente
