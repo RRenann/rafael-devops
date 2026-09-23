@@ -76,7 +76,7 @@ jobs:
       - name: Escanear Imagem com Trivy
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: ghcr.io/${{ github.repository }}:latest
+          image-ref: ghcr.io/rrenann/rafael-devops:latest
           format: table
           exit-code: '1'
           severity: 'CRITICAL'
